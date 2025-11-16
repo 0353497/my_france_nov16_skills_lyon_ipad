@@ -1,16 +1,136 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+import '../utils/api.dart';
 
-class Travelpage extends StatelessWidget {
+class Travelpage extends StatefulWidget {
   const Travelpage({super.key});
-  static List<Alignment> markerLocations = [
-    Alignment(-0.8, -0.6),
-    Alignment(0.3, -0.2),
-    Alignment(-0.5, 0.4),
-    Alignment(0.7, 0.8),
-  ];
+
+  @override
+  State<Travelpage> createState() => _TravelpageState();
+}
+
+class _TravelpageState extends State<Travelpage> {
+  List locationData = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadLocationData();
+  }
+
+  Future<void> loadLocationData() async {
+    try {
+      final data = await ApiHelper.readAssetJson(
+        'assets/data/location_map_data.json',
+      );
+      setState(() {
+        locationData = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('$e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Map<String, double> _getPositionFromCoordinates(List<dynamic> coordinates) {
+    double left = coordinates[0].toDouble();
+    double top = coordinates[1].toDouble();
+    return {'left': left, 'top': top};
+  }
+
+  void _showLocationDialog(Map<String, dynamic> location) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width / 2,
+            height: MediaQuery.of(context).size.height / 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          location['location_name'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          flex: 1,
+                          child: SingleChildScrollView(
+                            child: Text(location['location_introduction']),
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Flexible(
+                          flex: 1,
+                          child: Column(
+                            children: [
+                              Flexible(
+                                flex: 2,
+                                child: Image.asset(
+                                  "assets/location_image/${location['location_scene_image']}",
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Flexible(
+                                flex: 1,
+                                child: Image.asset(
+                                  "assets/location_image/${location['location_map_image']}",
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      launchUrlString("maps://");
+                    },
+                    child: Text("Go now!"),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
     return InteractiveViewer(
       panEnabled: true,
       scaleEnabled: true,
@@ -47,13 +167,15 @@ class Travelpage extends StatelessWidget {
                 ),
               ),
             ),
-            ...markerLocations.map((alignment) {
-              return Align(
-                alignment: alignment,
+            ...locationData.map((location) {
+              final position = _getPositionFromCoordinates(
+                location['location_mark_x_y_of_map_image'],
+              );
+              return Positioned(
+                left: position['left']! - 60,
+                top: position['top']! - 60,
                 child: GestureDetector(
-                  onTap: () {
-                    print("Marker tapped at ${alignment}");
-                  },
+                  onTap: () => _showLocationDialog(location),
                   child: Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -78,9 +200,7 @@ class Travelpage extends StatelessWidget {
                   backgroundColor: WidgetStatePropertyAll(Colors.white),
                   elevation: WidgetStatePropertyAll(4),
                 ),
-                onPressed: () {
-                  print("Draw button pressed");
-                },
+                onPressed: () {},
                 icon: Image.asset(width: 64, "assets/icons/icon_draw.png"),
               ),
             ),
@@ -95,7 +215,7 @@ class Travelpage extends StatelessWidget {
                   elevation: WidgetStatePropertyAll(4),
                 ),
                 onPressed: () {
-                  print("Download button pressed");
+                  debugPrint("Download button pressed");
                 },
                 icon: Icon(Icons.download, color: Colors.black, size: 64),
               ),

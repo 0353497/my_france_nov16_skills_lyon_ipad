@@ -277,14 +277,7 @@ class _AccountPageState extends State<AccountPage> {
                                   ),
                                 );
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Failed to load user agreement",
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
+                                debugPrint(e.toString());
                               }
                             },
                             child: Text(

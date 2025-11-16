@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -16,7 +18,7 @@ class ApiHelper {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({"userEmailAddress": email, "userPassword": password}),
     );
-    print(response.body);
+    debugPrint(response.body);
 
     return jsonDecode(response.body);
   }
@@ -72,5 +74,10 @@ class ApiHelper {
     final response = await http.get(url);
 
     return response.body;
+  }
+
+  static Future<List> readAssetJson(String path) async {
+    final data = await rootBundle.loadString(path);
+    return jsonDecode(data);
   }
 }
