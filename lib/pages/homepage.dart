@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:math';
+import '../utils/api.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -11,151 +13,302 @@ class Homepage extends StatefulWidget {
 class _HomepageState extends State<Homepage> {
   final ScrollController controller = ScrollController();
   int selectedIndex = -1;
+  List<Map<String, dynamic>> diaryEntries = [];
+  bool isLoading = true;
+  String? errorMessage;
+  bool isLeftSideDiaryList = true; // Track which view is on which side
 
-  final List<Map<String, dynamic>> diaryEntries = [
-    {
-      'image': 'assets/location_image/scene_3.jpg',
-      'title': 'Nice trip in Lyon',
-      'description': 'Exploring the beautiful city of Lyon',
-      'height': 200.0,
-    },
-    {
-      'image': 'assets/location_image/scene_1.jpg',
-      'title': 'Paris Adventure',
-      'description': 'A wonderful day at the Eiffel Tower',
-      'height': 500.0,
-    },
-    {
-      'image': 'assets/location_image/scene_5.jpg',
-      'title': 'Marseille Coast',
-      'description': 'Beautiful Mediterranean views',
-      'height': 500.0,
-    },
-    {
-      'image': 'assets/location_image/scene_7.jpg',
-      'title': 'Bordeaux Wine Tour',
-      'description': 'Tasting the finest French wines',
-      'height': 500.0,
-    },
-    {
-      'image': 'assets/location_image/scene_2.jpg',
-      'title': 'Nice Promenade',
-      'description': 'Walking along the French Riviera',
-      'height': 500.0,
-    },
-    {
-      'image': 'assets/location_image/scene_4.jpg',
-      'title': 'Strasbourg Cathedral',
-      'description': 'Gothic architecture at its finest',
-      'height': 500.0,
-    },
-    {
-      'image': 'assets/location_image/scene_6.jpg',
-      'title': 'Loire Valley Castles',
-      'description': 'Discovering medieval French castles',
-      'height': 500.0,
-    },
-    {
-      'image': 'assets/location_image/scene_8.jpg',
-      'title': 'Provence Lavender Fields',
-      'description': 'Purple fields as far as the eye can see',
-      'height': 500.0,
-    },
+  final List<String> assetImages = [
+    'assets/location_image/scene_1.jpg',
+    'assets/location_image/scene_2.jpg',
+    'assets/location_image/scene_3.jpg',
+    'assets/location_image/scene_4.jpg',
+    'assets/location_image/scene_5.jpg',
+    'assets/location_image/scene_6.jpg',
+    'assets/location_image/scene_7.jpg',
+    'assets/location_image/scene_8.jpg',
+    'assets/location_image/scene_9.jpg',
+    'assets/location_image/scene_10.jpg',
+    'assets/location_image/scene_11.jpg',
   ];
+
+  String getRandomAssetImage() {
+    final random = Random();
+    return assetImages[random.nextInt(assetImages.length)];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchDiaryEntries();
+  }
+
+  Future<void> fetchDiaryEntries() async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final response = await ApiHelper.getDiaries();
+
+      if (response['msg'] == 'Success' && response['data'] is List) {
+        setState(() {
+          diaryEntries = List<Map<String, dynamic>>.from(response['data']);
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Failed to load diary entries';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error: $e';
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Flexible(
-          flex: 1,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Text(
-                  "Diaries",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+        // Left side - draggable
+        Expanded(
+          child: DragTarget<String>(
+            onWillAcceptWithDetails: (data) =>
+                data.data == 'detail_view' || data.data == 'diary_list',
+            onAcceptWithDetails: (data) {
+              setState(() {
+                if (data.data == 'detail_view') {
+                  isLeftSideDiaryList = false;
+                } else if (data.data == 'diary_list') {
+                  isLeftSideDiaryList = true;
+                }
+              });
+            },
+            builder: (context, candidateData, rejectedData) {
+              return Container(
+                decoration: BoxDecoration(
+                  border: candidateData.isNotEmpty
+                      ? Border.all(color: Colors.blue, width: 2)
+                      : null,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: controller,
-                          child: Column(
-                            spacing: 12,
-                            children: List.generate(
-                              (diaryEntries.length / 2).ceil(),
-                              (index) {
-                                final entryIndex = index * 2;
-                                if (entryIndex >= diaryEntries.length)
-                                  return SizedBox.shrink();
-                                final entry = diaryEntries[entryIndex];
-                                return ListViewHomePageCard(
-                                  image: entry['image'],
-                                  title: entry['title'],
-                                  description: entry['description'],
-                                  height: entry['height'],
-                                  isSelected: selectedIndex == entryIndex,
-                                  onTap: () {
-                                    setState(() {
-                                      selectedIndex = entryIndex;
-                                    });
-                                  },
-                                );
-                              },
-                            ),
-                          ),
+                child: Draggable<String>(
+                  data: isLeftSideDiaryList ? 'diary_list' : 'detail_view',
+                  feedback: Container(
+                    width: 200,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withAlpha(100),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        isLeftSideDiaryList ? 'Diary List' : 'Detail View',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: controller,
-                          child: Column(
-                            spacing: 12,
-                            children: List.generate(
-                              (diaryEntries.length / 2).floor(),
-                              (index) {
-                                final entryIndex = index * 2 + 1;
-                                if (entryIndex >= diaryEntries.length)
-                                  return SizedBox.shrink();
-                                final entry = diaryEntries[entryIndex];
-                                return ListViewHomePageCard(
-                                  image: entry['image'],
-                                  title: entry['title'],
-                                  description: entry['description'],
-                                  height: entry['height'],
-                                  isSelected: selectedIndex == entryIndex,
-                                  onTap: () {
-                                    setState(() {
-                                      selectedIndex = entryIndex;
-                                    });
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
+                  childWhenDragging: Container(
+                    color: Colors.grey.withAlpha(50),
+                    child: Center(
+                      child: Text(
+                        'Drop zone',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  child: isLeftSideDiaryList
+                      ? _buildDiaryListView()
+                      : _buildDetailView(),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
-        Flexible(
-          flex: 1,
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: selectedIndex == -1
-                ? welcomeToFranceView()
-                : highlightCard(),
+        Expanded(
+          child: DragTarget<String>(
+            onWillAcceptWithDetails: (data) =>
+                data.data == 'detail_view' || data.data == 'diary_list',
+            onAcceptWithDetails: (data) {
+              setState(() {
+                if (data.data == 'detail_view') {
+                  isLeftSideDiaryList = true;
+                } else if (data.data == 'diary_list') {
+                  isLeftSideDiaryList = false;
+                }
+              });
+            },
+            builder: (context, candidateData, rejectedData) {
+              return Container(
+                decoration: BoxDecoration(
+                  border: candidateData.isNotEmpty
+                      ? Border.all(color: Colors.blue, width: 2)
+                      : null,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Draggable<String>(
+                  data: isLeftSideDiaryList ? 'detail_view' : 'diary_list',
+                  feedback: Container(
+                    width: 200,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withAlpha(100),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        isLeftSideDiaryList ? 'Detail View' : 'Diary List',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  childWhenDragging: Container(
+                    color: Colors.grey.withAlpha(100),
+                    child: Center(
+                      child: Text(
+                        'Drop zone',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  child: isLeftSideDiaryList
+                      ? _buildDetailView()
+                      : _buildDiaryListView(),
+                ),
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDiaryListView() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Text(
+                "Diaries",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+              ),
+              Spacer(),
+              Icon(Icons.drag_handle, color: Colors.grey),
+            ],
+          ),
+          if (isLoading)
+            Expanded(child: Center(child: CircularProgressIndicator()))
+          else if (errorMessage != null)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(errorMessage!),
+                    ElevatedButton(
+                      onPressed: fetchDiaryEntries,
+                      child: Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: controller,
+                      child: Column(
+                        spacing: 12,
+                        children: List.generate(diaryEntries.length, (index) {
+                          if (index % 2 != 0) return SizedBox.shrink();
+                          final entry = diaryEntries[index];
+                          return ListViewHomePageCard(
+                            image: getRandomAssetImage(),
+                            title: entry['diary_title'],
+                            description: 'By ${entry['diary_upload_username']}',
+                            height: index == 0 ? 200.0 : 500.0,
+                            isSelected: selectedIndex == index,
+                            onTap: () {
+                              setState(() {
+                                selectedIndex = index;
+                              });
+                            },
+                          );
+                        }).where((widget) => widget is! SizedBox).toList(),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: controller,
+                      child: Column(
+                        spacing: 12,
+                        children: List.generate(diaryEntries.length, (index) {
+                          if (index % 2 == 0) return SizedBox.shrink();
+                          final entry = diaryEntries[index];
+                          return ListViewHomePageCard(
+                            image: getRandomAssetImage(),
+                            title: entry['diary_title'],
+                            description: 'By ${entry['diary_upload_username']}',
+                            height: 500.0,
+                            isSelected: selectedIndex == index,
+                            onTap: () {
+                              setState(() {
+                                selectedIndex = index;
+                              });
+                            },
+                          );
+                        }).where((widget) => widget is! SizedBox).toList(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailView() {
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Text(
+                selectedIndex == -1 ? "Welcome" : "Detail View",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+              ),
+              Spacer(),
+              Icon(Icons.drag_handle, color: Colors.grey),
+            ],
+          ),
+          Expanded(
+            child: selectedIndex == -1 || diaryEntries.isEmpty
+                ? welcomeToFranceView()
+                : highlightCard(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -201,6 +354,11 @@ class _HomepageState extends State<Homepage> {
   }
 
   highlightCard() {
+    if (selectedIndex == -1 || selectedIndex >= diaryEntries.length) {
+      return welcomeToFranceView();
+    }
+
+    final selectedEntry = diaryEntries[selectedIndex];
     var data =
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
         "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
@@ -231,9 +389,7 @@ class _HomepageState extends State<Homepage> {
                         borderRadius: BorderRadius.circular(12),
                         image: DecorationImage(
                           fit: BoxFit.cover,
-                          image: AssetImage(
-                            diaryEntries[selectedIndex]["image"],
-                          ),
+                          image: AssetImage(getRandomAssetImage()),
                         ),
                       ),
                     ),
@@ -269,14 +425,16 @@ class _HomepageState extends State<Homepage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  diaryEntries[selectedIndex]["title"],
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    selectedEntry['diary_title'],
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 IconButton(
                   onPressed: () async {
                     final data = ClipboardData(
-                      text: diaryEntries[selectedIndex]["title"],
+                      text: selectedEntry['diary_title'],
                     );
                     Clipboard.setData(data);
                   },
@@ -286,7 +444,7 @@ class _HomepageState extends State<Homepage> {
             ),
             SizedBox(height: 8),
             Text(
-              diaryEntries[selectedIndex]["description"],
+              'By ${selectedEntry['diary_upload_username']} • ${selectedEntry['diary_upload_datetime']}',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -334,7 +492,7 @@ class ListViewHomePageCard extends StatelessWidget {
         height: height,
         child: Card(
           elevation: isSelected ? 8.0 : 1.0,
-          color: isSelected ? Colors.blueAccent.withOpacity(0.1) : null,
+          color: isSelected ? Colors.blueAccent.withAlpha(10) : null,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: isSelected
@@ -352,7 +510,9 @@ class ListViewHomePageCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       image: DecorationImage(
                         fit: BoxFit.cover,
-                        image: AssetImage(image),
+                        image: image.startsWith('http')
+                            ? NetworkImage(image) as ImageProvider
+                            : AssetImage(image),
                       ),
                     ),
                   ),

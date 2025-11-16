@@ -16,6 +16,7 @@ class ApiHelper {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({"userEmailAddress": email, "userPassword": password}),
     );
+    print(response.body);
 
     return jsonDecode(response.body);
   }
@@ -65,11 +66,11 @@ class ApiHelper {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> getUserAgreement() async {
+  static Future<String> getUserAgreement() async {
     final url = Uri.parse('$BASE_URL/api/user-agreement');
 
     final response = await http.get(url);
 
-    return jsonDecode(response.body);
+    return response.body;
   }
 }
