@@ -13,6 +13,7 @@ class Homepage extends StatefulWidget {
 class _HomepageState extends State<Homepage> {
   final ScrollController controller = ScrollController();
   int selectedIndex = -1;
+  bool isFavorite = false;
   List<Map<String, dynamic>> diaryEntries = [];
   bool isLoading = true;
   String? errorMessage;
@@ -413,10 +414,19 @@ class _HomepageState extends State<Homepage> {
                     child: IconButton(
                       onPressed: () {
                         setState(() {
-                          selectedIndex = -1;
+                          isFavorite = !isFavorite;
                         });
                       },
-                      icon: Icon(Icons.star_outline, weight: 12, size: 40),
+                      icon: SizedBox(
+                        width: 50,
+                        height: 50,
+                        child: Icon(
+                          isFavorite ? Icons.star : Icons.star_outline,
+                          weight: 12,
+                          size: 40,
+                          color: isFavorite ? Colors.amberAccent : null,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -438,6 +448,9 @@ class _HomepageState extends State<Homepage> {
                       text: selectedEntry['diary_title'],
                     );
                     Clipboard.setData(data);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Succes fully copied")),
+                    );
                   },
                   icon: Icon(Icons.copy),
                 ),

@@ -74,7 +74,7 @@ class SideBar extends StatelessWidget {
               CircleAvatar(
                 radius: 35,
                 foregroundImage: AssetImage(
-                  "assets/icons/art_icon_arc_de_triomphe.png",
+                  "assets/icons/art_icon_la_tour_eiffel.png",
                 ),
               ),
               Flexible(
