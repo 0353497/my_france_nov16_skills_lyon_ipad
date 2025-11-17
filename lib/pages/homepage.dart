@@ -64,10 +64,12 @@ class _HomepageState extends State<Homepage> {
         });
       }
     } catch (e) {
-      setState(() {
-        errorMessage = 'Error: $e';
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Error: $e';
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -76,7 +78,6 @@ class _HomepageState extends State<Homepage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Left side - draggable
         Expanded(
           child: DragTarget<String>(
             onWillAcceptWithDetails: (data) =>
